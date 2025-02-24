@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#F3F4F6" />
+  
+  <!-- Header -->
+  <rect x="50" y="30" width="700" height="60" rx="5" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1" />
+  <text x="400" y="70" font-family="Arial" font-size="22" font-weight="bold" text-anchor="middle" fill="#111827">Layer 1 Blockchain Analysis Dashboard</text>
+  
+  <!-- Market Analysis Panel -->
+  <rect x="50" y="110" width="700" height="120" rx="5" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1" />
+  <text x="70" y="135" font-family="Arial" font-size="16" font-weight="bold" fill="#111827">Real-time Market Analysis</text>
+  <text x="70" y="155" font-family="Arial" font-size="12" fill="#6B7280">Last updated: 2024-02-24 12:30:45</text>
+  
+  <!-- Mood Indicators -->
+  <text x="550" y="135" font-family="Arial" font-size="14" font-weight="bold" fill="#111827">SOL Mood:</text>
+  <circle cx="625" cy="132" r="7" fill="#10B981" />
+  <text x="640" y="135" font-family="Arial" font-size="14" fill="#111827">Bullish</text>
+  
+  <text x="550" y="155" font-family="Arial" font-size="14" font-weight="bold" fill="#111827">DOT Mood:</text>
+  <circle cx="625" cy="152" r="7" fill="#F59E0B" />
+  <text x="640" y="155" font-family="Arial" font-size="14" fill="#111827">Neutral</text>
+  
+  <!-- Analysis Box -->
+  <rect x="70" y="170" width="660" height="40" rx="5" fill="#F9FAFB" />
+  <text x="380" y="195" font-family="Arial" font-size="12" text-anchor="middle" fill="#4B5563">SOL showing strength with 5.2% gains while DOT lags at 1.8%. Correlation at multi-week low of 0.42.</text>
+  
+  <!-- Price Charts -->
+  <rect x="50" y="250" width="340" height="150" rx="5" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"
