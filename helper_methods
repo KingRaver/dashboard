@@ -1,0 +1,92 @@
+# Add these methods to your existing CryptoDatabase class
+
+def get_price_history(self, chain, time_cutoff):
+    """Get price history for a specific chain since the given cutoff time"""
+    query = """
+        SELECT timestamp, current_price as price
+        FROM market_data
+        WHERE chain = ? AND timestamp >= ?
+        ORDER BY timestamp ASC
+    """
+    try:
+        self.cursor.execute(query, (chain, time_cutoff.isoformat()))
+        rows = self.cursor.fetchall()
+        return [{'timestamp': row[0], 'price': row[1]} for row in rows]
+    except Exception as e:
+        print(f"Error getting price history: {e}")
+        return []
+
+def get_volume_history(self, chain, time_cutoff):
+    """Get volume history for a specific chain since the given cutoff time"""
+    query = """
+        SELECT timestamp, volume
+        FROM market_data
+        WHERE chain = ? AND timestamp >= ?
+        ORDER BY timestamp ASC
+    """
+    try:
+        self.cursor.execute(query, (chain, time_cutoff.isoformat()))
+        rows = self.cursor.fetchall()
+        return [{'timestamp': row[0], 'volume': row[1]} for row in rows]
+    except Exception as e:
+        print(f"Error getting volume history: {e}")
+        return []
+
+def get_mood_history(self, chain, time_cutoff):
+    """Get mood history for a specific chain since the given cutoff time"""
+    query = """
+        SELECT timestamp, mood
+        FROM mood_data
+        WHERE chain = ? AND timestamp >= ?
+        ORDER BY timestamp ASC
+    """
+    try:
+        self.cursor.execute(query, (chain, time_cutoff.isoformat()))
+        rows = self.cursor.fetchall()
+        return [{'timestamp': row[0], 'mood': row[1]} for row in rows]
+    except Exception as e:
+        print(f"Error getting mood history: {e}")
+        return []
+
+def get_correlation_history(self, time_cutoff):
+    """Get correlation history since the given cutoff time"""
+    query = """
+        SELECT timestamp, price_correlation, volume_correlation, market_cap_ratio
+        FROM correlation_data
+        WHERE timestamp >= ?
+        ORDER BY timestamp ASC
+    """
+    try:
+        self.cursor.execute(query, (time_cutoff.isoformat(),))
+        rows = self.cursor.fetchall()
+        return [{
+            'timestamp': row[0],
+            'price_correlation': row[1],
+            'volume_correlation': row[2],
+            'market_cap_ratio': row[3]
+        } for row in rows]
+    except Exception as e:
+        print(f"Error getting correlation history: {e}")
+        return []
+
+def get_latest_post(self):
+    """Get the most recent posted analysis"""
+    query = """
+        SELECT timestamp, content, trigger_type
+        FROM posted_content
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """
+    try:
+        self.cursor.execute(query)
+        row = self.cursor.fetchone()
+        if row:
+            return {
+                'timestamp': row[0],
+                'content': row[1],
+                'trigger_type': row[2]
+            }
+        return None
+    except Exception as e:
+        print(f"Error getting latest post: {e}")
+        return None
