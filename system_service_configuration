@@ -1,0 +1,20 @@
+[Unit]
+Description=Layer 1 Crypto Analysis Dashboard
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/path/to/your/project
+Environment="PATH=/path/to/your/venv/bin"
+ExecStart=/path/to/your/venv/bin/python dashboard.py
+Restart=always
+RestartSec=10
+
+# Optional: Configure logging
+StandardOutput=append:/var/log/crypto-dashboard/output.log
+StandardError=append:/var/log/crypto-dashboard/error.log
+
+[Install]
+WantedBy=multi-user.target
