@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layer 1 Crypto Analysis Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+        .mood-indicator {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .mood-bullish { background-color: #10B981; }
+        .mood-bearish { background-color: #EF4444; }
+        .mood-neutral { background-color: #F59E0B; }
+        .correlation-gauge {
+            width: 100%;
+            height: 30px;
+            background: linear-gradient(to right, #EF4444, #F59E0B, #10B981);
+            border-radius: 15px;
+            position: relative;
+        }
+        .correlation-marker {
+            position: absolute;
+            top: -10px;
+            width: 10px;
+            height: 50px;
+            background-color: #1F2937;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">Layer 1 Blockchain Analysis Dashboard</h1>
+        
+        <!-- Last Updated Info -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-semibold">Real-time Market Analysis</h2>
+                    <p class="text-gray-500">Last updated: <span id="last-updated">Loading...</span></p>
+                </div>
+                <div class="flex items-center">
+                    <div class="mr-4">
+                        <span class="font-semibold">SOL Mood:</span>
+                        <span id="sol-mood-indicator" class="mood-indicator mood-neutral"></span>
+                        <span id="sol-mood">Neutral</span>
+                    </div>
+                    <div>
+                        <span class="font-semibold">DOT Mood:</span>
+                        <span id="dot-mood-indicator" class="mood-indicator mood-neutral"></span>
+                        <span id="dot-mood">Neutral</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Latest Analysis -->
+            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h3 class="font-semibold mb-2">Latest Analysis:</h3>
+                <p id="latest-analysis" class="text-gray-700">Loading latest analysis...</p>
+            </div>
+        </div>
+        
+        <!-- Price Charts -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="text-xl font-semibold mb-4">SOL Price (24h)</h2>
+                <div class="chart-container">
+                    <canvas id="sol-price-chart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="text-xl font-semibold mb-4">DOT Price (24h)</h2>
+                <div class="chart-container">
+                    <canvas id="dot-price-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Volume Charts -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="text-xl font-semibold mb-4">SOL Volume (24h)</h2>
+                <div class="chart-container">
+                    <canvas id="sol-volume-chart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="text-xl font-semibold mb-4">DOT Volume (24h)</h2>
+                <div class="chart-container">
+                    <canvas id="dot-volume-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Correlation Section -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <h2 class="text-xl font-semibold mb-4">SOL/DOT Correlations</h2>
+            
+            <div class="mb-4">
+                <h3 class="font-medium mb-2">Price Correlation</h3>
+                <div class="correlation-gauge">
+                    <div id="price-correlation-marker" class="correlation-marker" style="left: 50%"></div>
+                </div>
+                <div class="flex justify-between text-sm text-gray-500 mt-1">
+                    <span>Low (0.0)</span>
+                    <span>Medium (0.5)</span>
+                    <span>High (1.0)</span>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <h3 class="font-medium mb-2">Volume Correlation</h3>
+                <div class="correlation-gauge">
+                    <div id="volume-correlation-marker" class="correlation-marker" style="left: 50%"></div>
+                </div>
+                <div class="flex justify-between text-sm text-gray-500 mt-1">
+                    <span>Low (0.0)</span>
+                    <span>Medium (0.5)</span>
+                    <span>High (1.0)</span>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="font-medium mb-2">Market Cap Ratio (SOL/DOT)</h3>
+                <div class="chart-container" style="height: 150px;">
+                    <canvas id="market-cap-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize socket connection
+        const socket = io();
+        
+        // Chart configurations and data
+        let priceCharts = {};
+        let volumeCharts = {};
+        let marketCapChart = null;
+        
+        // Function to initialize charts
+        function initializeCharts() {
+            // SOL Price Chart
+            priceCharts.SOL = new Chart(document.getElementById('sol-price-chart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'SOL Price (USD)',
+                        borderColor: 'rgb(75, 192, 192)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        data: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // DOT Price Chart
+            priceCharts.DOT = new Chart(document.getElementById('dot-price-chart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'DOT Price (USD)',
+                        borderColor: 'rgb(153, 102, 255)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        data: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // SOL Volume Chart
+            volumeCharts.SOL = new Chart(document.getElementById('sol-volume-chart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    datasets: [{
+                        label: 'SOL Volume (USD)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        borderColor: 'rgb(75, 192, 192)',
+                        borderWidth: 1,
+                        data: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // DOT Volume Chart
+            volumeCharts.DOT = new Chart(document.getElementById('dot-volume-chart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    datasets: [{
+                        label: 'DOT Volume (USD)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.5)',
+                        borderColor: 'rgb(153, 102, 255)',
+                        borderWidth: 1,
+                        data: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Market Cap Ratio Chart
+            marketCapChart = new Chart(document.getElementById('market-cap-chart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'SOL/DOT Market Cap Ratio',
+                        borderColor: 'rgb(255, 99, 132)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        data: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update chart data
+        function updateCharts(data) {
+            // Update price charts
+            for (const chain of ['SOL', 'DOT']) {
+                const priceData = data.price_history[chain].map(item => ({
+                    x: new Date(item.timestamp),
+                    y: item.price
+                }));
+                priceCharts[chain].data.datasets[0].data = priceData;
+                priceCharts[chain].update();
+                
+                // Update volume charts
+                const volumeData = data.volume_history[chain].map(item => ({
+                    x: new Date(item.timestamp),
+                    y: item.volume
+                }));
+                volumeCharts[chain].data.datasets[0].data = volumeData;
+                volumeCharts[chain].update();
+            }
+            
+            // Update market cap ratio chart
+            if (data.correlations.length > 0) {
+                const marketCapData = data.correlations.map(item => ({
+                    x: new Date(item.timestamp),
+                    y: item.market_cap_ratio
+                }));
+                marketCapChart.data.datasets[0].data = marketCapData;
+                marketCapChart.update();
+                
+                // Update correlation gauges
+                const latestCorrelation = data.correlations[data.correlations.length - 1];
+                document.getElementById('price-correlation-marker').style.left = `${latestCorrelation.price_correlation * 100}%`;
+                document.getElementById('volume-correlation-marker').style.left = `${latestCorrelation.volume_correlation * 100}%`;
+            }
+            
+            // Update mood indicators
+            for (const chain of ['SOL', 'DOT']) {
+                if (data.moods[chain].length > 0) {
+                    const latestMood = data.moods[chain][data.moods[chain].length - 1].mood;
+                    const moodIndicator = document.getElementById(`${chain.toLowerCase()}-mood-indicator`);
+                    const moodText = document.getElementById(`${chain.toLowerCase()}-mood`);
+                    
+                    // Remove all mood classes
+                    moodIndicator.classList.remove('mood-bullish', 'mood-bearish', 'mood-neutral');
+                    
+                    // Add appropriate mood class
+                    if (latestMood === 'bullish') {
+                        moodIndicator.classList.add('mood-bullish');
+                        moodText.textContent = 'Bullish';
+                    } else if (latestMood === 'bearish') {
+                        moodIndicator.classList.add('mood-bearish');
+                        moodText.textContent = 'Bearish';
+                    } else {
+                        moodIndicator.classList.add('mood-neutral');
+                        moodText.textContent = 'Neutral';
+                    }
+                }
+            }
+            
+            // Update latest analysis
+            if (data.latest_analysis) {
+                document.getElementById('latest-analysis').textContent = data.latest_analysis;
+            }
+            
+            // Update last updated time
+            document.getElementById('last-updated').textContent = moment().format('YYYY-MM-DD HH:mm:ss');
+        }
+        
+        // Socket event handlers
+        socket.on('connect', function() {
+            console.log('Connected to server');
+            initializeCharts();
+        });
+        
+        socket.on('initial_data', function(data) {
+            console.log('Received initial data');
+            updateCharts(data);
+        });
+        
+        socket.on('data_update', function(data) {
+            console.log('Received data update');
+            updateCharts(data);
+        });
+    </script>
+</body>
+</html>
