@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  # Dashboard Application
+  dashboard:
+    build: .
+    container_name: crypto-dashboard
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./:/app
+      - ./data:/app/data  # Mount your database directory
+    environment:
+      - FLASK_ENV=production
+    networks:
+      - crypto-network
+    command: gunicorn --worker-class eventlet -w 1 -b 0.0.0.0:5000 dashboard:app
+
+  # Optional: Separate service for your bot
+  bot:
+    build: .
+    container_name: crypto-bot
+    restart: always
+    volumes:
+      - ./:/app
+      - ./data:/app/data  # Share the same database
+    networks:
+      - crypto-network
+    command: python bot.py
+    depends_on:
+      - dashboard
+
+networks:
+  crypto-network:
+    driver: bridge
